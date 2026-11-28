@@ -3,37 +3,35 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // Reference data and optional admin: every environment.
-        $this->call([
-            GovernorateSeeder::class,
-            CategorySeeder::class,
-            PlatformSettingSeeder::class,
-            UserSeeder::class,
-        ]);
+        if (! app()->environment(['local', 'testing'])) {
+            $this->command?->warn('DatabaseSeeder only creates demo data in local or testing environments.');
 
-        // Demo data: local/testing only. Order follows foreign-key dependencies.
-        if (app()->environment(['local', 'testing'])) {
+            return;
+        }
+
+        DB::transaction(function (): void {
             $this->call([
+                GovernorateSeeder::class,
+                CategorySeeder::class,
+                PlatformSettingSeeder::class,
+                UserSeeder::class,
                 DestinationSeeder::class,
                 ActivitySeeder::class,
                 EventSeeder::class,
-                UserInterestSeeder::class,
                 ProviderSeeder::class,
                 ServiceSeeder::class,
+                TripSeeder::class,
+                TripItemsSeeder::class,
                 ExperienceSeeder::class,
                 FavoriteSeeder::class,
-                MediaSeeder::class,
-                TripSeeder::class,
-                BookingSeeder::class,
-                TripItemsSeeder::class,   // after bookings (trip_items.booking_id)
-                PaymentSeeder::class,    // after bookings
-                RefreshTokenSeeder::class,
+                UserInterestSeeder::class,
             ]);
-        }
+        });
     }
 }

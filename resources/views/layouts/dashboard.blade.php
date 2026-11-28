@@ -1,84 +1,24 @@
+@extends('layouts.app')
 
-<!DOCTYPE html>
-<html lang="en" dir="ltr" data-theme="jst">
+@section('title', 'Platform overview | JST')
+@section('page', 'admin-dashboard')
 
-<head>
-
-    <meta charset="UTF-8">
-
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=ibm-plex-sans-arabic:400,500,600,700&family=ibm-plex-sans:400,500,600,700" rel="stylesheet" />
-
-    <title>
-        @yield('title', $pageTitle . ' | JST')
-    </title>
-
-    @vite([
-        'resources/css/app.css',
-        'resources/js/app.js'
-    ])
-
-    @stack('styles')
-
-</head>
-
-<body>
-
-    <div class="drawer min-h-screen lg:drawer-open">
-
-        <input
-            id="jst-sidebar-toggle"
-            type="checkbox"
-            class="drawer-toggle"
-        >
-
-        {{-- Main Area --}}
-        <div class="drawer-content flex min-h-screen flex-col">
-
-            @include('dashboard.partials.header')
-
-            <main class="jst-main">
-
-                <div class="mx-auto w-full max-w-screen-2xl">
-
-                    @yield('content')
-
-                </div>
-
-            </main>
-
-            {{-- Footer --}}
-            <footer class="border-t border-base-300 bg-base-100 px-6 py-4">
-
-                <p class="text-center text-xs text-base-content/50">
-                    © {{ date('Y') }} Jordan Smart Travel.
-                    All rights reserved.
-                </p>
-
-            </footer>
-
-        </div>
-
-        {{-- Sidebar Area --}}
-        <div class="drawer-side z-40">
-
-            <label
-                for="jst-sidebar-toggle"
-                aria-label="Close navigation"
-                class="drawer-overlay"
-            ></label>
-
-            @include('dashboard.partials.sidebar')
-
-        </div>
-
+@section('content')
+<div class="dashboard-gate" data-dashboard-gate role="status"><span class="brand-mark" aria-hidden="true"><img src="{{ asset('images/jst-symbol.svg') }}" alt=""></span><p>Checking your JST account…</p></div>
+<div class="drawer dashboard-drawer lg:drawer-open hidden" data-dashboard-app>
+    <input id="dashboard-sidebar-toggle" class="drawer-toggle" type="checkbox" aria-label="Toggle navigation">
+    <div class="drawer-content dashboard-content">
+        @include('dashboard.partials.header')
+        <main class="dashboard-main">
+            <div class="dashboard-container">
+                @yield('dashboard-content')
+            </div>
+        </main>
+        <footer class="dashboard-footer"><span>JST Platform Console</span><span>Jordan Smart Travel · {{ date('Y') }}</span></footer>
     </div>
-
-    @stack('scripts')
-
-</body>
-</html>
+    <div class="drawer-side dashboard-drawer__side">
+        <label for="dashboard-sidebar-toggle" class="drawer-overlay" aria-label="Close navigation"></label>
+        @include('dashboard.partials.sidebar')
+    </div>
+</div>
+@endsection

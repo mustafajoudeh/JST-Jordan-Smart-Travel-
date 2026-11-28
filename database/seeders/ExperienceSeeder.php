@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\Destination;
-use App\Models\Experience;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -11,25 +10,35 @@ class ExperienceSeeder extends Seeder
 {
     public function run(): void
     {
-        if (Experience::query()->exists()) {
-            return;
-        }
-
-        $users = User::where('role', 'traveler')->pluck('id');
-        $destinations = Destination::where('status', 'published')->pluck('id');
-
-        if ($users->isEmpty() || $destinations->isEmpty()) {
-            $this->command?->warn('ExperienceSeeder skipped: need travelers and published destinations.');
-
-            return;
-        }
-
-        $owner = fn () => [
-            'user_id' => $users->random(),
-            'destination_id' => $destinations->random(),
+        $submissions = [
+            ['email' => 'demo.solo@jst.test', 'destination' => 'Amman Citadel', 'title' => 'Demo submission: a morning at the Citadel'],
+            ['email' => 'demo.couple@jst.test', 'destination' => 'Rainbow Street', 'title' => 'Demo submission: an evening in Jabal Amman'],
+            ['email' => 'demo.family@jst.test', 'destination' => 'The Royal Automobile Museum', 'title' => 'Demo submission: museum visit with family'],
+            ['email' => 'demo.friends@jst.test', 'destination' => 'Darat al Funun', 'title' => 'Demo submission: art and gardens in Weibdeh'],
+            ['email' => 'demo.budget@jst.test', 'destination' => 'Roman Theatre', 'title' => 'Demo submission: exploring downtown Amman'],
         ];
 
-        Experience::factory()->approved()->count(5)->state($owner)->create();
-        Experience::factory()->count(3)->state($owner)->create(); // pending moderation
+        foreach ($submissions as $submission) {
+            $user = User::where('email', $submission['email'])->where('role', 'traveler')->first();
+            $destination = Destination::where('name', $submission['destination'])
+                ->whereHas('governorate', fn ($query) => $query->where('name', 'Amman'))
+                ->first();
+
+            if (! $user || ! $destination) {
+                $this->command?->warn("ExperienceSeeder skipped {$submission['title']}: traveler or destination not found.");
+
+                continue;
+            }
+
+            $user->experiences()->firstOrCreate(
+                ['destination_id' => $destination->id, 'title' => $submission['title']],
+                [
+                    'body' => 'Local development placeholder awaiting a genuine traveler submission and moderation. Do not publish this text as a real review.',
+                    'rating' => 4,
+                    'social_url' => null,
+                    'tags' => ['demo', 'awaiting moderation'],
+                ]
+            );
+        }
     }
 }

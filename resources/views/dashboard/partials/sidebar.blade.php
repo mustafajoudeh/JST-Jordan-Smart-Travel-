@@ -1,153 +1,58 @@
-@php
-    $brand = config('jst-dashboard.brand');
-    $navigation = $roleConfig['navigation'] ?? [];
-
-    $previewEnabled = app()->environment('local') && \Illuminate\Support\Facades\Route::has('dashboard.preview');
-
-    /*
-    | Resolve navigation URL.
-    | Real route takes priority, local preview is the fallback.
-    */
-    $resolveUrl = function (array $item) use ($roleKey, $previewEnabled) {
-        $routeName = $item['route'] ?? null;
-
-        if ($routeName && \Illuminate\Support\Facades\Route::has($routeName)) {
-            return route($routeName, $item['route_params'] ?? []);
-        }
-
-        if ($previewEnabled) {
-            return route('dashboard.preview', [
-                'role' => $roleKey,
-                'page' => $item['key'],
-            ]);
-        }
-
-        return '#';
-    };
-@endphp
-
-<aside class="jst-sidebar">
-
-    {{-- Brand --}}
-    <div class="jst-sidebar__brand">
-
-        <div class="jst-sidebar__logo">
-            {{ $brand['short_name'] ?? 'JST' }}
-        </div>
-
-        <div class="min-w-0">
-
-            <h2 class="truncate text-sm font-bold">
-                {{ $brand['name'] ?? 'Jordan Smart Travel' }}
-            </h2>
-
-            <p class="mt-1 text-[10px] font-semibold tracking-widest text-base-content/45">
-                {{ $brand['console_label'] ?? 'MANAGEMENT CONSOLE' }}
-            </p>
-
-        </div>
-
-    </div>
-
-    {{-- Workspace --}}
-    <div class="jst-sidebar__workspace">
-        {{ $roleConfig['workspace'] }}
-    </div>
-
-    {{-- Navigation --}}
-    <nav class="jst-sidebar__nav" aria-label="Dashboard navigation">
-
-        @foreach ($navigation as $entry)
-            {{-- ==================================
-                 Standalone Link
-            =================================== --}}
-
-            @if (($entry['type'] ?? null) === 'link')
-                @php
-                    $isActive = $activePage === $entry['key'];
-                    $href = $resolveUrl($entry);
-                @endphp
-
-                <a href="{{ $href }}" class="jst-nav-link {{ $isActive ? 'is-active' : '' }}"
-                    @if ($isActive) aria-current="page" @endif>
-
-                    <i data-lucide="{{ $entry['icon'] }}" aria-hidden="true"></i>
-
-                    <span>{{ $entry['label'] }}</span>
-
-                </a>
-
-                {{-- ==================================
-                 Group with Nested Links
-            =================================== --}}
-            @elseif (($entry['type'] ?? null) === 'group')
-                @php
-                    $children = collect($entry['items'] ?? []);
-
-                    $groupIsActive = $children->contains(fn($child) => $activePage === $child['key']);
-                @endphp
-
-                <details class="jst-nav-group" @if ($groupIsActive) open @endif>
-
-                    <summary
-                        class="jst-nav-group__summary
-                            {{ $groupIsActive ? 'is-current' : '' }}">
-
-                        <i data-lucide="{{ $entry['icon'] }}" aria-hidden="true"></i>
-
-                        <span>{{ $entry['label'] }}</span>
-
-                        <i data-lucide="chevron-down" class="jst-nav-chevron" aria-hidden="true"></i>
-
-                    </summary>
-
-                    {{-- Child Items --}}
-                    <div class="jst-nav-group__items">
-
-                        @foreach ($children as $item)
-                            @php
-                                $isActive = $activePage === $item['key'];
-                                $href = $resolveUrl($item);
-                            @endphp
-
-                            <a href="{{ $href }}"
-                                class="
-                                    jst-nav-link
-                                    jst-nav-link--nested
-                                    {{ $isActive ? 'is-active' : '' }}
-                                "
-                                @if ($isActive) aria-current="page" @endif>
-
-                                <i data-lucide="{{ $item['icon'] }}" aria-hidden="true"></i>
-
-                                <span>{{ $item['label'] }}</span>
-
-                            </a>
-                        @endforeach
-
-                    </div>
-
-                </details>
-            @endif
-        @endforeach
-
+<aside class="jst-sidebar dashboard-sidebar">
+    <a class="brand-lockup dashboard-sidebar__brand" href="{{ route('home') }}" aria-label="Jordan Smart Travel home">
+        <span class="brand-mark" aria-hidden="true"><img src="{{ asset('images/jst-symbol.svg') }}" alt=""></span>
+        <span class="brand-wordmark"><strong>JST</strong><small>PLATFORM CONSOLE</small></span>
+    </a>
+    <div class="dashboard-sidebar__workspace"><span class="workspace-dot"></span><span data-workspace-label>System administration</span></div>
+    <nav class="dashboard-nav" aria-label="Platform navigation">
+        <a class="dashboard-nav__item is-active" href="{{ route('admin.dashboard') }}" aria-current="page"><i data-lucide="layout-dashboard" aria-hidden="true"></i><span>Overview</span></a>
+        <details class="dashboard-nav__group">
+            <summary><i data-lucide="folder-open" aria-hidden="true"></i><span>Content management</span><i class="dashboard-nav__chevron" data-lucide="chevron-down" aria-hidden="true"></i></summary>
+            <div class="dashboard-nav__children">
+                <span class="dashboard-nav__item is-disabled" aria-disabled="true"><i data-lucide="map-pin" aria-hidden="true"></i><span>Destinations</span><small>Planned</small></span>
+                <span class="dashboard-nav__item is-disabled" aria-disabled="true"><i data-lucide="calendar-days" aria-hidden="true"></i><span>Events</span><small>Planned</small></span>
+                <span class="dashboard-nav__item is-disabled" aria-disabled="true"><i data-lucide="activity" aria-hidden="true"></i><span>Activities</span><small>Planned</small></span>
+                <span class="dashboard-nav__item is-disabled" aria-disabled="true"><i data-lucide="sparkles" aria-hidden="true"></i><span>Experiences</span><small>Planned</small></span>
+            </div>
+        </details>
+        <details class="dashboard-nav__group" @if(request()->routeIs('admin.governorates', 'admin.categories')) open @endif>
+            <summary><i data-lucide="map" aria-hidden="true"></i><span>Locations &amp; classification</span><i class="dashboard-nav__chevron" data-lucide="chevron-down" aria-hidden="true"></i></summary>
+            <div class="dashboard-nav__children">
+                <a class="dashboard-nav__item {{ request()->routeIs('admin.governorates') ? 'is-active' : '' }}" href="{{ route('admin.governorates') }}" @if(request()->routeIs('admin.governorates')) aria-current="page" @endif><i data-lucide="map" aria-hidden="true"></i><span>Governorates</span></a>
+                <a class="dashboard-nav__item {{ request()->routeIs('admin.categories') ? 'is-active' : '' }}" href="{{ route('admin.categories') }}" @if(request()->routeIs('admin.categories')) aria-current="page" @endif><i data-lucide="tags" aria-hidden="true"></i><span>Categories</span></a>
+            </div>
+        </details>
+        <details class="dashboard-nav__group" data-platform-settings-group @if(request()->routeIs('admin.platform-settings')) open @endif>
+            <summary><i data-lucide="building-2" aria-hidden="true"></i><span>Provider management</span><i class="dashboard-nav__chevron" data-lucide="chevron-down" aria-hidden="true"></i></summary>
+            <div class="dashboard-nav__children">
+                <span class="dashboard-nav__item is-disabled" aria-disabled="true"><i data-lucide="building-2" aria-hidden="true"></i><span>Providers</span><small>Planned</small></span>
+                <span class="dashboard-nav__item is-disabled" aria-disabled="true"><i data-lucide="briefcase-business" aria-hidden="true"></i><span>Services</span><small>Planned</small></span>
+            </div>
+        </details>
+        <details class="dashboard-nav__group">
+            <summary><i data-lucide="route" aria-hidden="true"></i><span>Trip management</span><i class="dashboard-nav__chevron" data-lucide="chevron-down" aria-hidden="true"></i></summary>
+            <div class="dashboard-nav__children">
+                <span class="dashboard-nav__item is-disabled" aria-disabled="true"><i data-lucide="route" aria-hidden="true"></i><span>Trips</span><small>Planned</small></span>
+                <span class="dashboard-nav__item is-disabled" aria-disabled="true"><i data-lucide="list" aria-hidden="true"></i><span>Itinerary items</span><small>Planned</small></span>
+            </div>
+        </details>
+        <details class="dashboard-nav__group">
+            <summary><i data-lucide="wallet-cards" aria-hidden="true"></i><span>Financial management</span><i class="dashboard-nav__chevron" data-lucide="chevron-down" aria-hidden="true"></i></summary>
+            <div class="dashboard-nav__children">
+                <span class="dashboard-nav__item is-disabled" aria-disabled="true"><i data-lucide="credit-card" aria-hidden="true"></i><span>Payments</span><small>Planned</small></span>
+            </div>
+        </details>
+        <details class="dashboard-nav__group">
+            <summary><i data-lucide="shield-check" aria-hidden="true"></i><span>Platform management</span><i class="dashboard-nav__chevron" data-lucide="chevron-down" aria-hidden="true"></i></summary>
+            <div class="dashboard-nav__children">
+                <span class="dashboard-nav__item is-disabled" aria-disabled="true"><i data-lucide="users" aria-hidden="true"></i><span>Users</span><small>Planned</small></span>
+                <a class="dashboard-nav__item {{ request()->routeIs('admin.platform-settings') ? 'is-active' : '' }}" href="{{ route('admin.platform-settings') }}" data-system-admin-only @if(request()->routeIs('admin.platform-settings')) aria-current="page" @endif><i data-lucide="settings" aria-hidden="true"></i><span>Platform settings</span></a>
+            </div>
+        </details>
     </nav>
-
-    {{-- Sidebar Footer --}}
-    <div class="jst-sidebar__footer">
-
-        <div class="rounded-xl bg-base-200 p-3">
-
-            <p class="text-sm font-semibold">
-                {{ $roleConfig['label'] }}
-            </p>
-
-            <p class="mt-1 text-xs text-base-content/50">
-                {{ $brand['short_name'] ?? 'JST' }} Management Workspace
-            </p>
-
-        </div>
-
+    <div class="dashboard-sidebar__bottom">
+        <a class="sidebar-public-link" href="{{ route('home') }}"><i data-lucide="arrow-up-right" aria-hidden="true"></i><span>View public site</span></a>
+        <div class="sidebar-account"><span class="sidebar-account__avatar" data-user-initial>J</span><span class="sidebar-account__text"><strong data-user-name>JST Admin</strong><small data-user-role>System administrator</small></span></div>
+        <button class="sidebar-logout" type="button" data-logout><i data-lucide="log-out" aria-hidden="true"></i><span>Log Out</span></button>
     </div>
-
 </aside>

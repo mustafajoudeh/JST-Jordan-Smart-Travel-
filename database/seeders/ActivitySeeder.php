@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\Activity;
 use App\Models\Category;
 use App\Models\Destination;
 use Illuminate\Database\Seeder;
@@ -11,27 +10,41 @@ class ActivitySeeder extends Seeder
 {
     public function run(): void
     {
-        if (Activity::query()->exists()) {
-            return;
-        }
+        foreach (JstDemoCatalog::activities() as $destinationName => $activities) {
+            $destination = Destination::where('name', $destinationName)
+                ->whereHas('governorate', fn ($query) => $query->where('name', 'Amman'))
+                ->first();
 
-        $categories = Category::where('kind', 'tourism')->pluck('id');
-        $destinations = Destination::where('status', 'published')->get();
+            if (! $destination) {
+                $this->command?->warn("ActivitySeeder skipped {$destinationName}: destination not found.");
 
-        if ($categories->isEmpty() || $destinations->isEmpty()) {
-            $this->command?->warn('ActivitySeeder skipped: no tourism categories or published destinations.');
+                continue;
+            }
 
-            return;
-        }
+            $category = Category::where('kind', 'tourism')->whereKey($destination->category_id)->first();
 
-        foreach ($destinations as $destination) {
-            Activity::factory()
-                ->count(2)
-                ->state(fn () => [
-                    'destination_id' => $destination->id,
-                    'category_id' => $categories->random(),
-                ])
-                ->create();
+            if (! $category) {
+                $this->command?->warn("ActivitySeeder skipped {$destinationName}: its tourism category is missing.");
+
+                continue;
+            }
+
+            foreach ($activities as $activity) {
+                $destination->activities()->firstOrCreate(
+                    ['name' => $activity['name']],
+                    [
+                        'category_id' => $category->id,
+                        'description' => $activity['description'],
+                        'duration_min' => $activity['duration'],
+                        'estimated_cost' => $activity['cost'],
+                        'available_times' => null,
+                        'source_type' => 'curated',
+                        'source_url' => null,
+                        'last_verified_at' => null,
+                        'status' => 'published',
+                    ]
+                );
+            }
         }
     }
 }

@@ -38,7 +38,7 @@ class FavoriteFactory extends Factory
     {
         return $this->state([
             'destination_id' => null,
-            'service_id' => Service::factory()->approved(),
+            'service_id' => Service::factory(),
             'experience_id' => null,
         ]);
     }
@@ -48,7 +48,7 @@ class FavoriteFactory extends Factory
         return $this->state([
             'destination_id' => null,
             'service_id' => null,
-            'experience_id' => Experience::factory()->approved(),
+            'experience_id' => Experience::factory(),
         ]);
     }
 }

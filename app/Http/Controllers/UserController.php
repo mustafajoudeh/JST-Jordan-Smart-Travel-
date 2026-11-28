@@ -3,14 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Http\Resources\UserResource;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
     public function index()
     {
         $users = User::latest()->paginate(10);
-        return response()->json($users);
+        return UserResource::collection($users);
     }
 
     public function store(Request $request)
@@ -19,7 +21,7 @@ class UserController extends Controller
             'first_name' => 'required|string|max:50',
             'last_name' => 'required|string|max:50',
             'email' => 'required|email|unique:users,email',
-            'password_hash' => 'required|string|min:8',
+            'password' => 'required|string|min:8',
             'role' => 'nullable|string|in:traveler,provider,content_admin,system_admin',
             'country_code' => 'nullable|string|size:2',
             'photo_url' => 'nullable|string|max:500',
@@ -30,15 +32,18 @@ class UserController extends Controller
             'activity_level' => 'nullable|string|in:low,moderate,high',
         ]);
 
+        $validatedData['password_hash'] = Hash::make($validatedData['password']);
+        unset($validatedData['password']);
+
         $user = User::create($validatedData);
 
-        return response()->json($user, 201);
+        return (new UserResource($user))->response()->setStatusCode(201);
         
     }
 
     public function show(int $id)
     {
         $user = User::findOrFail($id);
-        return response()->json($user);
+        return new UserResource($user);
     }
 }

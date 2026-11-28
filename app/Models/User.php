@@ -9,12 +9,26 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Contracts\Auth\MustVerifyEmail as MustVerifyEmailContract;
+use Illuminate\Auth\MustVerifyEmail;
+use Laravel\Sanctum\HasApiTokens;
+use App\Enums\Role;
 
-class User extends Authenticatable
+
+class User extends Authenticatable implements MustVerifyEmailContract
 {
-    use HasFactory, Notifiable, SoftDeletes;
+    use HasFactory, Notifiable, SoftDeletes, HasApiTokens, MustVerifyEmail;
 
     protected $table = 'users';
+
+    protected static function booted(): void
+    {
+        static::updated(function (User $user): void {
+            if ($user->wasChanged('is_active') && ! $user->is_active) {
+                $user->tokens()->delete();
+            }
+        });
+    }
 
     protected $fillable = [
         'first_name',
@@ -29,10 +43,15 @@ class User extends Authenticatable
         'group_type',
         'activity_level',
         'is_active',
+        'role',
     ];
 
     protected $hidden = [
         'password_hash',
+        'remember_token',
+        'failed_login_attempts',
+        'last_login_at',
+        'deleted_at',
     ];
 
     protected function casts(): array
@@ -42,6 +61,8 @@ class User extends Authenticatable
             'failed_login_attempts' => 'integer',
             'last_login_at' => 'datetime',
             'deleted_at' => 'datetime',
+            'email_verified_at' => 'datetime',
+            'role' => Role::class,
         ];
     }
 

@@ -14,10 +14,10 @@ class PlatformSettingFactory extends Factory
     public function definition(): array
     {
         return [
-            'key' => str_replace('-', '_', fake()->unique()->slug(3)),
-            'value' => (string) fake()->numberBetween(1, 100),
-            'value_type' => 'integer',
-            'description' => fake()->optional()->sentence(),
+            'key' => 'local_demo_setting_'.fake()->unique()->numberBetween(1, 99999),
+            'value' => 'true',
+            'value_type' => 'boolean',
+            'description' => 'Local development setting fixture.',
             'updated_by' => null,
         ];
     }

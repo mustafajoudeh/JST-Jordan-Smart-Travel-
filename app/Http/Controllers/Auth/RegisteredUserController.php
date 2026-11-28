@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
+use App\Http\Resources\UserResource;
 
 class RegisteredUserController extends Controller
 {
@@ -35,12 +36,9 @@ class RegisteredUserController extends Controller
             'password_hash' => Hash::make($data['password']),
         ]);
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+        event(new Registered($user));
 
-        return response()->json([
-            'user' => $user,
-            'token' => $token,
-        ], 201);
+        return response()->json(['user' => new UserResource($user)], 201);
     }
 
 }

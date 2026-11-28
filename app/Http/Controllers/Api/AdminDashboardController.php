@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\DashboardPeriod;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Http\Requests\Admin\DashboardRequest;
+use App\Http\Resources\AdminDashboardResource;
 use App\Models\Destination;
 use App\Models\Provider;
 use App\Models\User;
@@ -18,32 +20,20 @@ class AdminDashboardController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request)
+    public function index(DashboardRequest $request)
     {
-        $period = $request->query('period', '30d');
+        $period = $request->validated()['period'];
 
-        $allowedPeriods = [
-            'today',
-            '7d',
-            '30d',
-            '90d',
-            'this_month',
-        ];
-
-        if (!in_array($period, $allowedPeriods, true)) {
-            $period = '30d';
-        }
-
-        $dateRange = $this->getDateRange($period);
+        $dateRange = DashboardPeriod::from($period)->dateRange();
 
         $kpis = $this->getDashboardKpis($dateRange);
         $bookingStatuses = $this->getBookingStatusData($dateRange);
         $revenueChart = $this->getRevenueChartData($dateRange);
-        $TopProviders = $this->getTopProvides($dateRange);
+        $topProviders = $this->getTopProviders($dateRange);
         $recentActivities = $this->getRecentActivities();
         $alerts = $this->getDashboardAlerts();
 
-        return response()->json([
+        return new AdminDashboardResource([
             'period' => $period,
             'date_range' => [
                 'start' => $dateRange['start']->toDateTimeString(),
@@ -51,7 +41,7 @@ class AdminDashboardController extends Controller
             ],
             'kpis' => $kpis,
             'booking_statuses' => $bookingStatuses,
-            'top_providers' => $TopProviders,
+            'top_providers' => $topProviders,
             'revenue_chart' => $revenueChart,
             'recent_activities' => $recentActivities,
             'alerts' => $alerts,
@@ -61,33 +51,33 @@ class AdminDashboardController extends Controller
     private function getDashboardKpis(array $dateRange): array
     {
 
-        $TotalDestinations = Destination::
-            whereBetween('created_at', [
+        $totalDestinations = Destination::query()
+            ->whereBetween('created_at', [
                 $dateRange['start'],
                 $dateRange['end']
             ])->count();
 
-        $TotalActiveTravelers = User::
-            where('role', 'traveler')
+        $newTravelers = User::query()
+            ->where('role', 'traveler')
             ->where('is_active', true)
             ->whereBetween('created_at', [
                 $dateRange['start'],
                 $dateRange['end']
             ])->count();
 
-        $TotalProviders = Provider::
-            whereBetween('created_at', [
+        $totalProviders = Provider::query()
+            ->whereBetween('created_at', [
                 $dateRange['start'],
                 $dateRange['end']
             ])->count();
 
-        $TotalActivities = Activity::whereBetween('created_at', [
+        $totalActivities = Activity::query()->whereBetween('created_at', [
             $dateRange['start'],
             $dateRange['end']
         ])->count();
 
-        $TotalEvents = Event::
-            whereBetween('created_at', [
+        $totalEvents = Event::query()
+            ->whereBetween('created_at', [
                 $dateRange['start'],
                 $dateRange['end']
             ])->count();
@@ -112,11 +102,11 @@ class AdminDashboardController extends Controller
             ->count();
 
         return [
-            'total_destinations' => $TotalDestinations,
-            'total_active_travelers' => $TotalActiveTravelers,
-            'total_providers' => $TotalProviders,
-            'total_activities' => $TotalActivities,
-            'total_events' => $TotalEvents,
+            'total_destinations' => $totalDestinations,
+            'new_travelers' => $newTravelers,
+            'total_providers' => $totalProviders,
+            'total_activities' => $totalActivities,
+            'total_events' => $totalEvents,
             'booking_gmv' => $financialTotals->booking_gmv,
             'platform_commission' => $financialTotals->platform_commission,
             'total_bookings' => $totalBookings
@@ -186,12 +176,19 @@ class AdminDashboardController extends Controller
             'confirmed' => (int) ($statuses['confirmed'] ?? 0),
             'pending' => (int) ($statuses['pending'] ?? 0),
             'cancelled' => (int) ($statuses['cancelled'] ?? 0),
+            'rejected' => (int) ($statuses['rejected'] ?? 0),
         ];
     }
 
-    private function getTopProvides(array $dateRange): array
+    private function getTopProviders(array $dateRange): array
     {
         return Provider::query()
+            ->whereHas('bookings', function ($query) use ($dateRange) {
+                $query->whereBetween('bookings.created_at', [
+                    $dateRange['start'],
+                    $dateRange['end']
+                ]);
+            })
             ->withCount([
                 'bookings' => function ($query) use ($dateRange) {
                     $query->whereBetween('bookings.created_at', [
@@ -213,7 +210,7 @@ class AdminDashboardController extends Controller
             ->limit(5)
             ->get()
             ->map(fn($provider) => [
-                'name' => $provider->name,
+                'name' => $provider->display_name,
                 'totalBookings' => $provider->bookings_count,
                 'totalGMV' => (float) ($provider->bookings_sum_total_price ?? 0),
             ])
@@ -264,7 +261,7 @@ class AdminDashboardController extends Controller
             ->get(['id', 'display_name', 'created_at'])
             ->map(fn($provider) => [
                 'type' => 'provider',
-                'title' => 'New Provider    ',
+                'title' => 'New Provider',
                 'description' => $provider->display_name,
                 'createdAt' => $provider->created_at,
             ]);
@@ -293,7 +290,7 @@ class AdminDashboardController extends Controller
             $alerts[] = [
                 'type' => 'booking',
                 'title' => 'Pending Bookings',
-                'description' => "{$pendingBookings} bookings are waiting for confirmation.",
+                'description' => 'Awaiting provider confirmation.',
                 'count' => $pendingBookings,
                 'priority' => 'warning',
             ];
@@ -304,40 +301,4 @@ class AdminDashboardController extends Controller
 
 
 
-    private function getDateRange(string $period): array
-    {
-        $now = CarbonImmutable::now();
-
-        return match ($period) {
-            'today' => [
-                'start' => $now->startOfDay(),
-                'end' => $now,
-            ],
-
-            '7d' => [
-                'start' => $now->subDays(6)->startOfDay(),
-                'end' => $now,
-            ],
-
-            '30d' => [
-                'start' => $now->subDays(29)->startOfDay(),
-                'end' => $now,
-            ],
-
-            '90d' => [
-                'start' => $now->subDays(89)->startOfDay(),
-                'end' => $now,
-            ],
-
-            'this_month' => [
-                'start' => $now->startOfMonth(),
-                'end' => $now,
-            ],
-
-            default => [
-                'start' => $now->subDays(29)->startOfDay(),
-                'end' => $now,
-            ],
-        };
-    }
 }

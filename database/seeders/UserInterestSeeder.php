@@ -5,30 +5,32 @@ namespace Database\Seeders;
 use App\Models\Category;
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 class UserInterestSeeder extends Seeder
 {
     public function run(): void
     {
-        $categoryIds = Category::where('kind', 'tourism')->pluck('id');
-        $users = User::where('role', 'traveler')->pluck('id');
+        $interests = [
+            'demo.solo@jst.test' => ['Historical', 'Cultural', 'Food'],
+            'demo.couple@jst.test' => ['Cultural', 'Food', 'Relaxation'],
+            'demo.family@jst.test' => ['Historical', 'Family Activities', 'Cultural'],
+            'demo.friends@jst.test' => ['Food', 'Adventure', 'Cultural'],
+            'demo.budget@jst.test' => ['Historical', 'Food', 'Cultural'],
+        ];
 
-        if ($categoryIds->count() < 3 || $users->isEmpty()) {
-            $this->command?->warn('UserInterestSeeder skipped: need travelers and tourism categories.');
+        foreach ($interests as $email => $names) {
+            $user = User::where('email', $email)->where('role', 'traveler')->first();
 
-            return;
-        }
-
-        $rows = [];
-
-        foreach ($users as $userId) {
-            foreach ($categoryIds->random(3) as $categoryId) {
-                $rows[] = ['user_id' => $userId, 'category_id' => $categoryId];
+            if (! $user) {
+                continue;
             }
-        }
 
-        // insertOrIgnore on the composite PK makes this safe to repeat.
-        DB::table('user_interests')->insertOrIgnore($rows);
+            $categoryIds = Category::where('kind', 'tourism')
+                ->whereIn('name', $names)
+                ->pluck('id')
+                ->all();
+
+            $user->interests()->syncWithoutDetaching($categoryIds);
+        }
     }
 }

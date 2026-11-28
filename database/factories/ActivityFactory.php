@@ -6,7 +6,6 @@ use App\Models\Activity;
 use App\Models\Category;
 use App\Models\Destination;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
 
 /** @extends Factory<Activity> */
 class ActivityFactory extends Factory
@@ -18,23 +17,21 @@ class ActivityFactory extends Factory
         return [
             'destination_id' => Destination::factory(),
             'category_id' => Category::factory()->tourism(),
-            'name' => Str::title(fake()->unique()->words(3, true)),
-            'description' => fake()->paragraph(),
+            'name' => fake()->randomElement([
+                'Explore the Umayyad Palace', 'Walk the Temple of Hercules ridge',
+                'Visit the Roman Theatre', 'Walk Rainbow Street',
+                'Explore Jordanian heritage galleries', 'Visit the contemporary art spaces',
+                'Explore Jordan’s motoring history', 'Walk the Jabal Al-Weibdeh lanes',
+                'Discover downtown Amman architecture', 'Take a historic city walk',
+            ]).' demo activity '.fake()->unique()->numberBetween(1, 99999),
+            'description' => 'A Jordan tourism activity awaiting editorial review.',
             'duration_min' => fake()->randomElement([30, 45, 60, 90, 120]),
             'estimated_cost' => fake()->randomFloat(2, 0, 30),
-            'available_times' => [
-                'sun' => ['10:00', '16:00'],
-                'mon' => ['10:00', '16:00'],
-                'tue' => ['10:00', '16:00'],
-                'wed' => ['10:00', '16:00'],
-                'thu' => ['10:00', '16:00'],
-                'fri' => null,
-                'sat' => ['10:00', '16:00'],
-            ],
+            'available_times' => null,
             'source_type' => 'curated',
             'source_url' => null,
-            'last_verified_at' => now()->toDateString(),
-            'status' => 'published',
+            'last_verified_at' => null,
+            'status' => 'draft',
             'created_by' => null,
         ];
     }
@@ -49,11 +46,21 @@ class ActivityFactory extends Factory
         return $this->state(['status' => 'inactive']);
     }
 
-    public function official(): static
+    public function published(): static
     {
+        return $this->state(['status' => 'published']);
+    }
+
+    public function officialFromVerifiedSource(string $sourceUrl): static
+    {
+        if (filter_var($sourceUrl, FILTER_VALIDATE_URL) === false || parse_url($sourceUrl, PHP_URL_SCHEME) !== 'https') {
+            throw new \InvalidArgumentException('An HTTPS source URL must be supplied and verified by the caller.');
+        }
+
         return $this->state([
             'source_type' => 'official',
-            'source_url' => fake()->url(),
+            'source_url' => $sourceUrl,
+            'last_verified_at' => now()->toDateString(),
         ]);
     }
 }

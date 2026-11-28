@@ -71,7 +71,7 @@ class TripItemsFactory extends Factory
             'destination_id' => null,
             'activity_id' => null,
             'event_id' => null,
-            'service_id' => Service::factory()->approved(),
+            'service_id' => Service::factory()->bookable(),
         ]);
     }
 

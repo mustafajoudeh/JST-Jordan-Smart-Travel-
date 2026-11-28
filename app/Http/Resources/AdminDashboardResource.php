@@ -14,6 +14,15 @@ class AdminDashboardResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        return parent::toArray($request);
+        return [
+            'period' => $this['period'],
+            'date_range' => $this['date_range'],
+            'kpis' => $this['kpis'],
+            'booking_statuses' => $this['booking_statuses'],
+            'top_providers' => $this['top_providers'],
+            'revenue_chart' => $this['revenue_chart'],
+            'recent_activities' => $this['recent_activities'],
+            'alerts' => $this['alerts'],
+        ];
     }
 }

@@ -13,8 +13,11 @@ class GovernorateFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->unique()->city(),
-            'description' => fake()->optional()->sentence(),
+            'name' => fake()->unique()->randomElement([
+                'Amman', 'Irbid', 'Ajloun', 'Jerash', 'Madaba', 'Karak',
+                'Aqaba', 'Mafraq', 'Balqa', 'Tafilah', 'Ma’an', 'Zarqa',
+            ]),
+            'description' => 'A governorate in Jordan.',
             'is_active' => true,
         ];
     }

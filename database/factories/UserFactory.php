@@ -57,7 +57,8 @@ class UserFactory extends Factory
 
     public function trashed(): static
     {
-        return $this->state(['deleted_at' => now()]);
+        return $this->state(['deleted_at' => now()])
+            ->afterMaking(fn (User $user) => $user->forceFill(['deleted_at' => now()]));
     }
 
     public function withoutPreferences(): static

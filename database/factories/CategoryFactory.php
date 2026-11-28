@@ -4,7 +4,6 @@ namespace Database\Factories;
 
 use App\Models\Category;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
 
 /** @extends Factory<Category> */
 class CategoryFactory extends Factory
@@ -15,20 +14,35 @@ class CategoryFactory extends Factory
     {
         return [
             'kind' => 'tourism',
-            'name' => Str::title(fake()->unique()->words(2, true)),
-            'description' => fake()->optional()->sentence(),
+            'name' => fake()->randomElement([
+                'Historical', 'Cultural', 'Religious', 'Nature', 'Adventure',
+                'Food', 'Relaxation', 'Family Activities',
+            ]).' Demo '.fake()->unique()->numberBetween(1, 99999),
+            'description' => null,
             'is_active' => true,
         ];
     }
 
     public function tourism(): static
     {
-        return $this->state(['kind' => 'tourism']);
+        return $this->state(fn () => [
+            'kind' => 'tourism',
+            'name' => fake()->randomElement([
+                'Historical', 'Cultural', 'Religious', 'Nature', 'Adventure',
+                'Food', 'Relaxation', 'Family Activities',
+            ]).' Demo '.fake()->unique()->numberBetween(1, 99999),
+        ]);
     }
 
     public function service(): static
     {
-        return $this->state(['kind' => 'service']);
+        return $this->state(fn () => [
+            'kind' => 'service',
+            'name' => fake()->randomElement([
+                'Guided Tours', 'Cultural Experiences', 'Food Experiences',
+                'City Tours', 'Activities', 'Transportation',
+            ]).' Demo '.fake()->unique()->numberBetween(1, 99999),
+        ]);
     }
 
     public function inactive(): static

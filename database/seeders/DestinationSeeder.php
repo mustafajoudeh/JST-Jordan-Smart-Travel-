@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\Category;
-use App\Models\Destination;
 use App\Models\Governorate;
 use Illuminate\Database\Seeder;
 
@@ -11,26 +10,41 @@ class DestinationSeeder extends Seeder
 {
     public function run(): void
     {
-        if (Destination::query()->exists()) {
-            return;
-        }
+        $amman = Governorate::where('name', 'Amman')->first();
 
-        $governorate = Governorate::where('name', 'Amman')->first();
-        $categories = Category::where('kind', 'tourism')->pluck('id');
-
-        if (! $governorate || $categories->isEmpty()) {
-            $this->command?->warn('DestinationSeeder skipped: run GovernorateSeeder and CategorySeeder first.');
+        if (! $amman) {
+            $this->command?->warn('DestinationSeeder skipped: the Amman governorate is missing.');
 
             return;
         }
 
-        // Demo data only (lorem text). Real curated destinations come from the team.
-        Destination::factory()
-            ->count(12)
-            ->state(fn () => [
-                'governorate_id' => $governorate->id,
-                'category_id' => $categories->random(),
-            ])
-            ->create();
+        foreach (JstDemoCatalog::destinations() as $data) {
+            $category = Category::where('kind', 'tourism')->where('name', $data['category'])->first();
+
+            if (! $category) {
+                $this->command?->warn("DestinationSeeder skipped {$data['name']}: tourism category not found.");
+
+                continue;
+            }
+
+            $amman->destinations()->firstOrCreate(
+                ['name' => $data['name']],
+                [
+                    'category_id' => $category->id,
+                    'description' => $data['description'],
+                    'latitude' => $data['latitude'],
+                    'longitude' => $data['longitude'],
+                    'address' => $data['address'],
+                    'suggested_duration_min' => $data['duration'],
+                    'estimated_cost' => $data['cost'],
+                    'opening_hours' => null,
+                    'tags' => $data['tags'],
+                    'source_type' => 'curated',
+                    'source_url' => null,
+                    'last_verified_at' => null,
+                    'status' => 'published',
+                ]
+            );
+        }
     }
 }
